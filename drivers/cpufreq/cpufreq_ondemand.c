@@ -2,8 +2,8 @@
  *  drivers/cpufreq/cpufreq_ondemand.c
  *
  *  Copyright (C)  2001 Russell King
- *	    (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
- *		      Jun Nakajima <jun.nakajima@intel.com>
+ *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
+ *                      Jun Nakajima <jun.nakajima@intel.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -32,8 +32,6 @@
 
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
 #define DEF_FREQUENCY_UP_THRESHOLD		(80)
-#define DEF_SAMPLING_DOWN_FACTOR		(50)
-#define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(95)
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
@@ -66,10 +64,10 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 static
 #endif
 struct cpufreq_governor cpufreq_gov_ondemand = {
-       .name		   = "ondemand",
-       .governor	       = cpufreq_governor_dbs,
+       .name                   = "ondemand",
+       .governor               = cpufreq_governor_dbs,
        .max_transition_latency = TRANSITION_LATENCY_LIMIT,
-       .owner		  = THIS_MODULE,
+       .owner                  = THIS_MODULE,
 };
 
 /* Sampling types */
@@ -85,7 +83,6 @@ struct cpu_dbs_info_s {
 	unsigned int freq_lo;
 	unsigned int freq_lo_jiffies;
 	unsigned int freq_hi_jiffies;
-	unsigned int rate_mult;
 	int cpu;
 	unsigned int sample_type:1;
 	/*
@@ -112,11 +109,9 @@ static struct dbs_tuners {
 	unsigned int up_threshold;
 	unsigned int down_differential;
 	unsigned int ignore_nice;
-	unsigned int sampling_down_factor;
 	unsigned int powersave_bias;
 } dbs_tuners_ins = {
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
-	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
 	.down_differential = DEF_FREQUENCY_DOWN_DIFFERENTIAL,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
@@ -251,13 +246,12 @@ define_one_ro(sampling_rate_min);
 /* cpufreq_ondemand Governor Tunables */
 #define show_one(file_name, object)					\
 static ssize_t show_##file_name						\
-(struct kobject *kobj, struct attribute *attr, char *buf)	      \
+(struct kobject *kobj, struct attribute *attr, char *buf)              \
 {									\
 	return sprintf(buf, "%u\n", dbs_tuners_ins.object);		\
 }
 show_one(sampling_rate, sampling_rate);
 show_one(up_threshold, up_threshold);
-show_one(sampling_down_factor, sampling_down_factor);
 show_one(ignore_nice_load, ignore_nice);
 show_one(powersave_bias, powersave_bias);
 
@@ -283,7 +277,7 @@ show_one_old(sampling_rate_min);
 show_one_old(sampling_rate_max);
 
 #define define_one_ro_old(object, _name)       \
-static struct freq_attr object =	       \
+static struct freq_attr object =               \
 __ATTR(_name, 0444, show_##_name##_old, NULL)
 
 define_one_ro_old(sampling_rate_min_old, sampling_rate_min);
@@ -321,29 +315,6 @@ static ssize_t store_up_threshold(struct kobject *a, struct attribute *b,
 
 	mutex_lock(&dbs_mutex);
 	dbs_tuners_ins.up_threshold = input;
-	mutex_unlock(&dbs_mutex);
-
-	return count;
-}
-
-static ssize_t store_sampling_down_factor(struct kobject *a,
-			struct attribute *b, const char *buf, size_t count)
-{
-	unsigned int input, j;
-	int ret;
-	ret = sscanf(buf, "%u", &input);
-
-	if (ret != 1 || input > MAX_SAMPLING_DOWN_FACTOR || input < 1)
-		return -EINVAL;
-	mutex_lock(&dbs_mutex);
-	dbs_tuners_ins.sampling_down_factor = input;
-
-	/* Reset down sampling multiplier in case it was active */
-	for_each_online_cpu(j) {
-		struct cpu_dbs_info_s *dbs_info;
-		dbs_info = &per_cpu(od_cpu_dbs_info, j);
-		dbs_info->rate_mult = 1;
-	}
 	mutex_unlock(&dbs_mutex);
 
 	return count;
@@ -415,14 +386,12 @@ define_one_rw(sampling_rate);
 define_one_rw(up_threshold);
 define_one_rw(ignore_nice_load);
 define_one_rw(powersave_bias);
-define_one_rw(sampling_down_factor);
 
 static struct attribute *dbs_attributes[] = {
 	&sampling_rate_max.attr,
 	&sampling_rate_min.attr,
 	&sampling_rate.attr,
 	&up_threshold.attr,
-	&sampling_down_factor.attr,
 	&ignore_nice_load.attr,
 	&powersave_bias.attr,
 	NULL
@@ -449,7 +418,7 @@ write_one_old(ignore_nice_load);
 write_one_old(powersave_bias);
 
 #define define_one_rw_old(object, _name)       \
-static struct freq_attr object =	       \
+static struct freq_attr object =               \
 __ATTR(_name, 0644, show_##_name##_old, store_##_name##_old)
 
 define_one_rw_old(sampling_rate_old, sampling_rate);
@@ -564,10 +533,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	/* Check for frequency increase */
 	if (max_load_freq > dbs_tuners_ins.up_threshold * policy->cur) {
-		/* If switching to max speed, apply sampling_down_factor */
-		if (policy->cur < policy->max)
-			this_dbs_info->rate_mult =
-				dbs_tuners_ins.sampling_down_factor;
 		dbs_freq_increase(policy, policy->max);
 		return;
 	}
@@ -590,12 +555,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 				(dbs_tuners_ins.up_threshold -
 				 dbs_tuners_ins.down_differential);
 
-		/* No longer fully busy, reset rate_mult */
-		this_dbs_info->rate_mult = 1;
-
-		if (freq_next < policy->min)
-			freq_next = policy->min;
-
 		if (!dbs_tuners_ins.powersave_bias) {
 			__cpufreq_driver_target(policy, freq_next,
 					CPUFREQ_RELATION_L);
@@ -616,8 +575,7 @@ static void do_dbs_timer(struct work_struct *work)
 	int sample_type = dbs_info->sample_type;
 
 	/* We want all CPUs to do sampling nearly on same jiffy */
-	int delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate
-		* dbs_info->rate_mult);
+	int delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
 
 	if (num_online_cpus() > 1)
 		delay -= jiffies % delay;
@@ -659,7 +617,6 @@ static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
 	cancel_delayed_work_sync(&dbs_info->work);
 }
 
-#ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_INPUT
 static void dbs_refresh_callback(struct work_struct *unused)
 {
 	struct cpufreq_policy *policy;
@@ -688,29 +645,11 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 	schedule_work(&dbs_refresh_work);
 }
 
-static int input_dev_filter(const char* input_dev_name)
-{
-	int ret = 0;
-	if (strstr(input_dev_name, "touchscreen") ||
-		strstr(input_dev_name, "-keypad") ||
-		strstr(input_dev_name, "-nav") ||
-		strstr(input_dev_name, "-oj")) {
-	}
-	else {
-		ret = 1;
-	}
-	return ret;
-}
-
 static int dbs_input_connect(struct input_handler *handler,
 		struct input_dev *dev, const struct input_device_id *id)
 {
 	struct input_handle *handle;
 	int error;
-
-	/* filter out those input_dev that we don't care */
-	if (input_dev_filter(dev->name))
-		return 0;
 
 	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
 	if (!handle)
@@ -755,7 +694,6 @@ static struct input_handler dbs_input_handler = {
 	.name		= "cpufreq_ond",
 	.id_table	= dbs_ids,
 };
-#endif
 
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				   unsigned int event)
@@ -794,7 +732,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			}
 		}
 		this_dbs_info->cpu = cpu;
-		this_dbs_info->rate_mult = 1;
 		ondemand_powersave_bias_init_cpu(cpu);
 		/*
 		 * Start the timerschedule work, when this governor
@@ -821,9 +758,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				max(min_sampling_rate,
 				    latency * LATENCY_MULTIPLIER);
 		}
-#ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_INPUT
 		rc = input_register_handler(&dbs_input_handler);
-#endif
 		mutex_unlock(&dbs_mutex);
 
 		mutex_init(&this_dbs_info->timer_mutex);
@@ -837,9 +772,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		sysfs_remove_group(&policy->kobj, &dbs_attr_group_old);
 		mutex_destroy(&this_dbs_info->timer_mutex);
 		dbs_enable--;
-#ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_INPUT
 		input_unregister_handler(&dbs_input_handler);
-#endif
 		mutex_unlock(&dbs_mutex);
 		if (!dbs_enable)
 			sysfs_remove_group(cpufreq_global_kobject,
