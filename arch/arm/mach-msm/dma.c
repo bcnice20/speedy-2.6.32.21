@@ -516,7 +516,7 @@ static irqreturn_t msm_datamover_irq_handler(int irq, void *dev_id)
 		int_status &= ~mask;
 		ch_status = readl(DMOV_REG(DMOV_STATUS(ch), adm));
 		if (!(ch_status & DMOV_STATUS_RSLT_VALID)) {
-			printk(KERN_ERR "msm_datamover_irq_handler id %d, "
+			PRINT_FLOW("msm_datamover_irq_handler id %d, "
 				"result not valid %x\n", id, ch_status);
 			continue;
 		}

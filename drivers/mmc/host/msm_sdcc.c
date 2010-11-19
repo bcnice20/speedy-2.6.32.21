@@ -58,7 +58,7 @@
 	pr_debug("%s: %s: " fmt "\n", mmc_hostname(host->mmc), __func__ , args)
 
 #define IRQ_DEBUG 0
-
+#define DISABLE_WIMAX_BUSCLK_PWRSAVE 0
 #define DISABLE_SVLTE_BUSCLK_PWRSAVE 1
 
 #if defined(CONFIG_DEBUG_FS)
@@ -75,7 +75,6 @@ static int msmsdcc_auto_suspend(struct mmc_host *, int);
 #define BUSCLK_PWRSAVE 1
 #define BUSCLK_TIMEOUT (HZ)
 #define SQN_BUSCLK_TIMEOUT (5 * HZ)
-
 static unsigned int msmsdcc_fmin = 144000;
 static unsigned int msmsdcc_fmax = 50000000;
 static unsigned int msmsdcc_4bit = 1;
@@ -96,11 +95,8 @@ static unsigned long msmsdcc_irqtime;
 
 #ifdef CONFIG_WIMAX
 extern int mmc_wimax_get_status(void);
-extern int mmc_wimax_get_busclk_pwrsave(void);
-extern void mmc_wimax_enable_host_wakeup(int on);
 #else
 static int mmc_wimax_get_status(void) { return 0; }
-static int mmc_wimax_get_busclk_pwrsave(void) { return 0; }
 #endif
 
 #if IRQ_DEBUG == 1
@@ -176,7 +172,7 @@ msmsdcc_disable_clocks(struct msmsdcc_host *host, int deferr)
 
 	if (is_wimax_platform(host->plat) && mmc_wimax_get_status()) {
 		if (host->curr.mrq) {
-			printk("%s [WiMAX] %s curr.mrq != NULL", __func__, mmc_hostname(host->mmc));
+			printk("%s [WiMAX] curr.mrq != NULL", __func__);
 			return;
 		}
 
@@ -192,6 +188,10 @@ msmsdcc_disable_clocks(struct msmsdcc_host *host, int deferr)
 			return;
 		}
 	}
+	if (is_sd_platform(host->plat) && host->curr.mrq) {
+		printk("%s [SD] curr.mrq != NULL", __func__);
+		return;
+	}
 
 	WARN_ON(!host->clks_on);
 
@@ -201,7 +201,7 @@ msmsdcc_disable_clocks(struct msmsdcc_host *host, int deferr)
 	BUG_ON(host->curr.mrq);
 
 	if (is_wimax_platform(host->plat) && mmc_wimax_get_status()) {
-		if (!mmc_wimax_get_busclk_pwrsave())
+		if (DISABLE_WIMAX_BUSCLK_PWRSAVE)
 			return;
 		else
 			delay = SQN_BUSCLK_TIMEOUT;
@@ -221,9 +221,6 @@ msmsdcc_disable_clocks(struct msmsdcc_host *host, int deferr)
 		if (host->clks_on) {
 #if SDC_CLK_VERBOSE
 			if (is_wimax_platform(host->plat)) {
-#ifdef CONFIG_WIMAX
-				mmc_wimax_enable_host_wakeup(1);
-#endif
 				pr_info("%s: Disable clocks\n", mmc_hostname(host->mmc));
 			}
 #endif
@@ -277,10 +274,6 @@ msmsdcc_enable_clocks(struct msmsdcc_host *host)
 #if SDC_CLK_VERBOSE
 		if (is_wimax_platform(host->plat)) {
 			pr_info("%s: Enable clocks\n", mmc_hostname(host->mmc));
-
-#ifdef CONFIG_WIMAX
-            mmc_wimax_enable_host_wakeup(0);
-#endif
 		}
 #endif
 		rc = clk_enable(host->pclk);
@@ -364,7 +357,7 @@ static void msmsdcc_reset_and_restore(struct msmsdcc_host *host)
 				mmc_hostname(host->mmc), host->clk_rate, ret);
 }
 
-void
+static void
 msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 {
 	BUG_ON(host->curr.data);
@@ -388,15 +381,13 @@ msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 	mmc_request_done(host->mmc, mrq);
 	spin_lock(&host->lock);
 }
-EXPORT_SYMBOL(msmsdcc_request_end);
 
-void
+static void
 msmsdcc_stop_data(struct msmsdcc_host *host)
 {
 	host->curr.data = NULL;
 	host->curr.got_dataend = 0;
 }
-EXPORT_SYMBOL(msmsdcc_stop_data);
 
 uint32_t msmsdcc_fifo_addr(struct msmsdcc_host *host)
 {
@@ -1145,36 +1136,6 @@ msmsdcc_handle_irq_data(struct msmsdcc_host *host, u32 status,
 	}
 }
 
-/* Try to recover from spurious IRQ */
-static void msmsdcc_resolve_bad_irq(struct msmsdcc_host *host)
-{
-	struct mmc_command *cmd = host->curr.cmd;
-	struct mmc_data *data = host->curr.data;
-	printk(KERN_INFO "%s: %s\n", mmc_hostname(host->mmc),
-		__func__);
-
-	if (!host->curr.mrq) {
-		msmsdcc_reset_and_restore(host);
-		return;
-	}
-
-	if (cmd)
-		cmd->error = -EIO;
-
-	if (data && host->dma.sg) {
-		data->error = -EFAULT;
-		msm_dmov_stop_cmd(host->dma.channel,
-			  &host->dma.hdr, 0);
-	} else {
-		msmsdcc_reset_and_restore(host);
-		if (data) {
-			data->error = -EIO;
-			msmsdcc_stop_data(host);
-		}
-		msmsdcc_request_end(host, host->curr.mrq);
-	}
-}
-
 static irqreturn_t
 msmsdcc_irq(int irq, void *dev_id)
 {
@@ -1183,14 +1144,8 @@ msmsdcc_irq(int irq, void *dev_id)
 	u32			status;
 	int			ret = 0;
 	int			cardint = 0;
-	static unsigned int	irq_count;
-	static unsigned long last_unhandled;
-	static unsigned int	irqs_unhandled;
 
 	spin_lock(&host->lock);
-
-	if ((is_sd_platform(host->plat) || is_mmc_platform(host->plat)) && (++irq_count == 99900))
-		irq_count = 0;
 
 	do {
 		status = msmsdcc_readl(host, MMCISTATUS);
@@ -1207,25 +1162,8 @@ msmsdcc_irq(int irq, void *dev_id)
 #if IRQ_DEBUG
 		msmsdcc_print_status(host, "irq0-p", status);
 #endif
-		if ((is_sd_platform(host->plat) || is_mmc_platform(host->plat)) && (irq_count == 0)) {
-			if (irqs_unhandled > 99800) {
-				msmsdcc_resolve_bad_irq(host);
-				irqs_unhandled = 0;
-				break;
-			}
-			irqs_unhandled = 0;
-		}
-
-		if (!status) {
-			if ((is_sd_platform(host->plat) || is_mmc_platform(host->plat)) && !ret) {
-				if (time_after(jiffies, last_unhandled + HZ/10))
-					irqs_unhandled = 1;
-				else
-					irqs_unhandled++;
-				last_unhandled = jiffies;
-			}
+		if (!status)
 			break;
-		}
 
 		msmsdcc_handle_irq_data(host, status, base);
 
@@ -1523,6 +1461,9 @@ static void msmsdcc_early_suspend(struct early_suspend *h)
 		container_of(h, struct msmsdcc_host, early_suspend);
 	unsigned long flags;
 
+#if SDC_CLK_VERBOSE
+	printk("%s enter\n", __func__);
+#endif
 	spin_lock_irqsave(&host->lock, flags);
 	host->polling_enabled = host->mmc->caps & MMC_CAP_NEEDS_POLL;
 	host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
@@ -1533,6 +1474,10 @@ static void msmsdcc_early_suspend(struct early_suspend *h)
 			msmsdcc_disable_clocks(host, 0);
 		}
 	}
+
+#if SDC_CLK_VERBOSE
+	printk("%s leave\n", __func__);
+#endif
 };
 static void msmsdcc_late_resume(struct early_suspend *h)
 {
@@ -1540,13 +1485,18 @@ static void msmsdcc_late_resume(struct early_suspend *h)
 		container_of(h, struct msmsdcc_host, early_suspend);
 	unsigned long flags;
 
+#if SDC_CLK_VERBOSE
+	printk("%s enter\n", __func__);
+#endif
 	if (host->polling_enabled) {
 		spin_lock_irqsave(&host->lock, flags);
 		host->mmc->caps |= MMC_CAP_NEEDS_POLL;
 		mmc_detect_change(host->mmc, 0);
 		spin_unlock_irqrestore(&host->lock, flags);
 	}
-
+#if SDC_CLK_VERBOSE
+	printk("%s leave\n", __func__);
+#endif
 };
 #endif
 
@@ -1847,7 +1797,6 @@ msmsdcc_suspend(struct platform_device *dev, pm_message_t state)
 				pr_info("%s: Disable clocks in %s\n", mmc_hostname(host->mmc), __func__);
 			}
 #endif			
-			// For suspend case
 			clk_disable(host->clk);
 			clk_disable(host->pclk);
 			host->clks_on = 0;
