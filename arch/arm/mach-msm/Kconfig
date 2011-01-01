@@ -937,7 +937,7 @@ config MSM_DALRPC_TEST
 	  Exercises DAL RPC calls to QDSP6.
 
 config MSM_CPU_FREQ_SCREEN
-	bool
+	bool "Simple cpufreq scaling based on screen ON/OFF"
 	default n
 	depends on HAS_EARLYSUSPEND
 	help
@@ -956,11 +956,11 @@ config MSM_CPU_FREQ_SCREEN_ON
 endif # MSM_CPU_FREQ_SCREEN
 
 config MSM_CPU_FREQ_ONDEMAND_MAX
-	int "Max"
+	int "Ondemand maximum frequency"
 	default 384000
 
 config MSM_CPU_FREQ_ONDEMAND_MIN
-	int "Min"
+	int "Ondemand minimum frequency"
 	default 245760
 
 config MSM_HW3D
