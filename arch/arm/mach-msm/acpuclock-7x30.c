@@ -60,6 +60,7 @@ struct clock_state {
 	struct mutex			lock;
 	uint32_t			acpu_switch_time_us;
 	uint32_t			vdd_switch_time_us;
+	unsigned long                   power_collapse_khz;
 	unsigned long			wait_for_irq_khz;
 	int				wfi_ramp_down;
 	int				pwrc_ramp_down;
@@ -79,48 +80,102 @@ struct clkctl_acpu_speed {
 static struct clock_state drv_state = { 0 };
 
 static struct cpufreq_frequency_table freq_table[] = {
-	{ 0, 245760 },
-	{ 1, 368640 },
-	{ 2, 768000 },
-	{ 3, 806400 },
-	{ 4, 1017600 },
-	{ 5, 1113600 },
-	{ 6, 1209600 },
-	{ 7, 1305600 },
-	{ 8, 1401600 },
-	{ 9, 1497600 },
-	{ 10, CPUFREQ_TABLE_END },
-	/* Just an example of some of the insanity I was able to pull off on my
-	   device */
-	//{ 8, 1612800 },
-	//{ 9, 1708800 },
-	//{ 10, CPUFREQ_TABLE_END },
+        { 0, 245760 },
+        { 1, 368640 },
+        { 2, 768000 },
+        { 3, 806400 },
+        { 4, 825600 },
+        { 5, 844800 },
+        { 6, 864000 },
+        { 7, 883200 },
+        { 8, 902400 },
+        { 9, 921600 },
+        { 10, 940800 },
+        { 11, 960000 },
+        { 12, 979200 },
+        { 13, 998400 },
+        { 14, 1017600 },
+        { 15, 1036800 },
+        { 16, 1056000 },
+        { 17, 1075200 },
+        { 18, 1094400 },
+        { 19, 1113600 },
+	{ 20, 1132800 },
+	{ 21, 1152000 },
+	{ 22, 1171200 },
+	{ 23, 1190400 },
+        { 24, 1209600 },
+	{ 25, 1228800 },
+	{ 27, 1248000 },
+	{ 28, 1248000 },
+	{ 29, 1267200 },
+	{ 30, 1286400 },
+        { 31, 1305600 },
+	{ 32, 1324800 },
+	{ 33, 1344000 },
+	{ 34, 1363200 },
+	{ 35, 1382400 },
+        { 36, 1401600 },
+        { 37, 1420800 },
+        { 38, 1440000 },
+        { 39, 1459200 },
+        { 40, 1478400 },
+        { 41, 1497600 },
+        { 42, 1516800 },
+        { 43, CPUFREQ_TABLE_END },
 };
 
 /* Use negative numbers for sources that can't be enabled/disabled */
 #define SRC_LPXO (-2)
 #define SRC_AXI  (-1)
 static struct clkctl_acpu_speed acpu_freq_tbl[] = {
-	{ 24576,  SRC_LPXO, 0, 0,  30720,  1000, VDD_RAW(1000) },
-	{ 61440,  PLL_3,    5, 11, 61440,  1000, VDD_RAW(1000) },
-	{ 122880, PLL_3,    5, 5,  61440,  1000, VDD_RAW(1000) },
-	{ 184320, PLL_3,    5, 4,  61440,  1000, VDD_RAW(1000) },
-	{ MAX_AXI_KHZ, SRC_AXI, 1, 0, 61440, 1000, VDD_RAW(1000) },
-	{ 245760, PLL_3,    5, 2,  61440,  1000, VDD_RAW(1000) },
-	{ 368640, PLL_3,    5, 1,  122800, 1050, VDD_RAW(1050) },
-	{ 768000, PLL_1,    2, 0,  153600, 1100, VDD_RAW(1100) },
-	/* Make sure any freq based from PLL_2 is a multiple of 19200! 
-	   Voltage tables are being very conservative and are not designed to
-	   be an undervolt of any sort. */
-	{ 806400, PLL_2,    3, 0,  192000, 1100, VDD_RAW(1100) },
-	{ 1017600, PLL_2,   3, 0,  192000, 1200, VDD_RAW(1200) },
-	{ 1113600, PLL_2,   3, 0,  192000, 1200, VDD_RAW(1200) },
-	{ 1209600, PLL_2,   3, 0,  192000, 1200, VDD_RAW(1200) },
-	{ 1305600, PLL_2,   3, 0,  192000, 1200, VDD_RAW(1200) },
-	{ 1401600, PLL_2,   3, 0,  192000, 1300, VDD_RAW(1300) },
-	{ 1497600, PLL_2,   3, 0,  192000, 1300, VDD_RAW(1300) },
-	//{ 1612800, PLL_2,   3, 0,  192000, 1400, VDD_RAW(1400) },
-	//{ 1708800, PLL_2,   3, 0,  192000, 1400, VDD_RAW(1400) },
+        { 24576,  SRC_LPXO, 0, 0,  30720,  850, VDD_RAW(850) },
+        { 61440,  PLL_3,    5, 11, 61440,  900, VDD_RAW(900) },
+        { 122880, PLL_3,    5, 5,  61440,  950, VDD_RAW(950) },
+        { 184320, PLL_3,    5, 4,  61440,  975, VDD_RAW(975) },
+        { MAX_AXI_KHZ, SRC_AXI, 1, 0, 61440, 1000, VDD_RAW(1000) },
+        { 245760, PLL_3,    5, 2,  61440,  1000, VDD_RAW(1000) },
+        { 368640, PLL_3,    5, 1,  122800, 1000, VDD_RAW(1000) },
+        { 768000, PLL_1,    2, 0,  153600, 1025, VDD_RAW(1025) },
+	/* Make sure any freq based from PLL_2 is a multiple of 19200! */
+        { 806400, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+        { 825600, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+        { 844800, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+        { 864000, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+        { 883200, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+        { 902400, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+        { 921600, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+        { 940800, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+        { 960000, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+        { 979200, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+        { 998400, PLL_2,    3, 0,  192000, 1050, VDD_RAW(1050) },
+        { 1017600, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1075) },
+        { 1036800, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1075) },
+        { 1056000, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1075) },
+        { 1075200, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1075) },
+        { 1094400, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1075) },
+        { 1113600, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1075) },
+        { 1132800, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1075) },
+        { 1152000, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1075) },
+        { 1171200, PLL_2,   3, 0,  192000, 1100, VDD_RAW(1100) },
+        { 1190400, PLL_2,   3, 0,  192000, 1125, VDD_RAW(1125) },
+        { 1209600, PLL_2,   3, 0,  192000, 1150, VDD_RAW(1150) },
+        { 1228800, PLL_2,   3, 0,  192000, 1150, VDD_RAW(1150) },
+        { 1248000, PLL_2,   3, 0,  192000, 1150, VDD_RAW(1150) },
+        { 1267200, PLL_2,   3, 0,  192000, 1150, VDD_RAW(1150) },
+        { 1286400, PLL_2,   3, 0,  192000, 1150, VDD_RAW(1175) },
+        { 1305600, PLL_2,   3, 0,  192000, 1175, VDD_RAW(1175) },
+        { 1324800, PLL_2,   3, 0,  192000, 1175, VDD_RAW(1175) },
+        { 1344000, PLL_2,   3, 0,  192000, 1175, VDD_RAW(1175) },
+        { 1363200, PLL_2,   3, 0,  192000, 1200, VDD_RAW(1200) },
+        { 1382400, PLL_2,   3, 0,  192000, 1225, VDD_RAW(1225) },
+        { 1401600, PLL_2,   3, 0,  192000, 1250, VDD_RAW(1250) },
+        { 1420800, PLL_2,   3, 0,  192000, 1250, VDD_RAW(1250) },
+        { 1440000, PLL_2,   3, 0,  192000, 1250, VDD_RAW(1250) },
+        { 1459200, PLL_2,   3, 0,  192000, 1250, VDD_RAW(1250) },
+        { 1478400, PLL_2,   3, 0,  192000, 1275, VDD_RAW(1275) },
+        { 1497600, PLL_2,   3, 0,  192000, 1300, VDD_RAW(1300) },
+        { 1516800, PLL_2,   3, 0,  192000, 1300, VDD_RAW(1300) },
 	{ 0 }
 };
 static unsigned long max_axi_rate;
@@ -129,23 +184,26 @@ static unsigned long max_axi_rate;
 unsigned long acpuclk_power_collapse(int from_idle)
 {
 	int ret = acpuclk_get_rate();
-	if (drv_state.pwrc_ramp_down)
-		acpuclk_set_rate(POWER_COLLAPSE_HZ, SETRATE_PC);
-	return ret * 1000;
+	ret *= 1000;
+	if (ret > drv_state.power_collapse_khz)
+		acpuclk_set_rate(drv_state.power_collapse_khz,
+	(from_idle ? SETRATE_PC_IDLE : SETRATE_PC));
+	return ret;
 }
 
 unsigned long acpuclk_get_wfi_rate(void)
 {
-	return drv_state.wait_for_irq_khz * 1000;
+	return drv_state.wait_for_irq_khz;
 }
 
 #define WAIT_FOR_IRQ_HZ (MAX_AXI_KHZ * 1000)
 unsigned long acpuclk_wait_for_irq(void)
 {
 	int ret = acpuclk_get_rate();
-	if (drv_state.wfi_ramp_down)
-		acpuclk_set_rate(WAIT_FOR_IRQ_HZ, SETRATE_SWFI);
-	return ret * 1000;
+	ret *= 1000;
+	if (ret > drv_state.wait_for_irq_khz)
+		acpuclk_set_rate(drv_state.wait_for_irq_khz, SETRATE_SWFI);
+	return ret;
 }
 
 static int acpuclk_set_acpu_vdd(struct clkctl_acpu_speed *s)
@@ -340,11 +398,11 @@ static unsigned int acpuclk_get_current_vdd(void)
 	unsigned int vdd_mv;
 
 	vdd_raw = msm_spm_get_vdd();
-	for (vdd_mv = 750; vdd_mv <= 1350; vdd_mv += 25)
+	for (vdd_mv = 850; vdd_mv <= 1300; vdd_mv += 25)
 		if (VDD_RAW(vdd_mv) == vdd_raw)
 			break;
 
-	if (vdd_mv > 1350)
+	if (vdd_mv > 1300)
 		return 0;
 
 	return vdd_mv;
@@ -363,7 +421,7 @@ static int acpuclk_update_freq_tbl(unsigned int acpu_khz, unsigned int acpu_vdd)
 		pr_err("%s: acpuclk invalid speed %d\n", __func__, acpu_khz);
 		return -1;
 	}
-	if (acpu_vdd > 1350 || acpu_vdd < 750) {
+	if (acpu_vdd > 1300 || acpu_vdd < 850) {
 		pr_err("%s: acpuclk vdd out of ranage, %d\n",
 			__func__, acpu_vdd);
 		return -2;
@@ -497,6 +555,7 @@ void __init msm_acpu_clock_init(struct msm_acpu_clock_platform_data *clkdata)
 	mutex_init(&drv_state.lock);
 	drv_state.acpu_switch_time_us = clkdata->acpu_switch_time_us;
 	drv_state.vdd_switch_time_us = clkdata->vdd_switch_time_us;
+	drv_state.power_collapse_khz = clkdata->power_collapse_khz;
 	drv_state.wfi_ramp_down = 1;
 	drv_state.pwrc_ramp_down = 1;
 	/* PLL2 runs at 1017.6MHz for MSM8x55. */
@@ -509,4 +568,5 @@ void __init msm_acpu_clock_init(struct msm_acpu_clock_platform_data *clkdata)
 	cpufreq_frequency_table_get_attr(freq_table, smp_processor_id());
 	register_acpuclock_debug_dev(&acpu_debug_7x30);
 }
+
 
