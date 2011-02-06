@@ -122,7 +122,10 @@ static struct cpufreq_frequency_table freq_table[] = {
         { 40, 1478400 },
         { 41, 1497600 },
         { 42, 1516800 },
-        { 43, CPUFREQ_TABLE_END },
+	{ 43, 1612800 },
+	{ 44, 1708800 },
+	{ 45, 1804800 },
+        { 46, CPUFREQ_TABLE_END },
 };
 
 /* Use negative numbers for sources that can't be enabled/disabled */
@@ -176,7 +179,10 @@ static struct clkctl_acpu_speed acpu_freq_tbl[] = {
         { 1478400, PLL_2,   3, 0,  192000, 1275, VDD_RAW(1275) },
         { 1497600, PLL_2,   3, 0,  192000, 1300, VDD_RAW(1300) },
         { 1516800, PLL_2,   3, 0,  192000, 1300, VDD_RAW(1300) },
-	{ 0 }
+	    { 1612800, PLL_2,   3, 0,  192000, 1400, VDD_RAW(1400) },
+	    { 1708800, PLL_2,   3, 0,  192000, 1400, VDD_RAW(1400) },
+	    { 1804800, PLL_2,   3, 0,  192000, 1450, VDD_RAW(1450) },
+	    { 0 }
 };
 static unsigned long max_axi_rate;
 
@@ -399,10 +405,13 @@ static unsigned int acpuclk_get_current_vdd(void)
 
 	vdd_raw = msm_spm_get_vdd();
 	for (vdd_mv = 850; vdd_mv <= 1300; vdd_mv += 25)
+
+	for (vdd_mv = 850; vdd_mv <= 1450; vdd_mv += 25)
+
 		if (VDD_RAW(vdd_mv) == vdd_raw)
 			break;
 
-	if (vdd_mv > 1300)
+	if (vdd_mv > 1350)
 		return 0;
 
 	return vdd_mv;
@@ -422,6 +431,7 @@ static int acpuclk_update_freq_tbl(unsigned int acpu_khz, unsigned int acpu_vdd)
 		return -1;
 	}
 	if (acpu_vdd > 1300 || acpu_vdd < 850) {
+	if (acpu_vdd > 1450 || acpu_vdd < 850) {
 		pr_err("%s: acpuclk vdd out of ranage, %d\n",
 			__func__, acpu_vdd);
 		return -2;
@@ -534,18 +544,6 @@ static void __init lpj_init(void)
 	}
 }
 
-/* Update frequency tables for a 1017.6MHz PLL2. */
-void __init pll2_1024mhz_fixup(void)
-{
-	if (acpu_freq_tbl[ARRAY_SIZE(acpu_freq_tbl)-2].acpu_clk_khz != 806400
-		  || freq_table[ARRAY_SIZE(freq_table)-2].frequency != 806400) {
-		pr_err("Frequency table fixups for PLL2 rate failed.\n");
-		BUG();
-	}
-	acpu_freq_tbl[ARRAY_SIZE(acpu_freq_tbl)-2].acpu_clk_khz = 1017600;
-	freq_table[ARRAY_SIZE(freq_table)-2].frequency = 1017600;
-}
-
 #define RPM_BYPASS_MASK	(1 << 3)
 #define PMIC_MODE_MASK	(1 << 4)
 void __init msm_acpu_clock_init(struct msm_acpu_clock_platform_data *clkdata)
@@ -558,15 +556,10 @@ void __init msm_acpu_clock_init(struct msm_acpu_clock_platform_data *clkdata)
 	drv_state.power_collapse_khz = clkdata->power_collapse_khz;
 	drv_state.wfi_ramp_down = 1;
 	drv_state.pwrc_ramp_down = 1;
-	/* PLL2 runs at 1017.6MHz for MSM8x55. */
-	if (cpu_is_msm8x55()) {
-		pll2_1024mhz_fixup();
-	}
 	acpuclk_init();
 	lpj_init();
 
 	cpufreq_frequency_table_get_attr(freq_table, smp_processor_id());
 	register_acpuclock_debug_dev(&acpu_debug_7x30);
 }
-
 
