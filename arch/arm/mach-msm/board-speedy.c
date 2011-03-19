@@ -50,6 +50,7 @@
 #include <mach/board.h>
 #include <mach/board_htc.h>
 #include <mach/msm_serial_hs.h>
+
 #ifdef CONFIG_SERIAL_MSM_HS_PURE_ANDROID
 #include <mach/bcm_bt_lpm.h>
 #endif
@@ -1983,6 +1984,10 @@ static struct platform_device android_pmem_ciq3_device = {
 };
 #endif
 
+static struct platform_device *proximity_device[] __initdata = {
+	&capella_cm3602,
+};
+
 #if defined(CONFIG_SERIAL_MSM_HS) && defined(CONFIG_SERIAL_MSM_HS_PURE_ANDROID)
 static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
     .rx_wakeup_irq = -1,
@@ -1998,11 +2003,11 @@ static struct bcm_bt_lpm_platform_data bcm_bt_lpm_pdata = {
 };
 
 struct platform_device bcm_bt_lpm_device = {
-	.name = "bcm_bt_lpm",
-	.id = 0,
-	.dev = {
-		.platform_data = &bcm_bt_lpm_pdata,
-	},
+    .name = "bcm_bt_lpm",
+    .id = 0,
+    .dev = {
+        .platform_data = &bcm_bt_lpm_pdata,
+    },
 };
 
 #define ATAG_BDADDR 0x43294329  /* mahimahi bluetooth address tag */
@@ -2013,21 +2018,22 @@ static char bdaddr[BDADDR_STR_SIZE];
 
 module_param_string(bdaddr, bdaddr, sizeof(bdaddr), 0400);
 MODULE_PARM_DESC(bdaddr, "bluetooth address");
-
+ 
 static int __init parse_tag_bdaddr(const struct tag *tag)
 {
-	unsigned char *b = (unsigned char *)&tag->u;
+    unsigned char *b = (unsigned char *)&tag->u;
 
-	if (tag->hdr.size != ATAG_BDADDR_SIZE)
-		return -EINVAL;
+    if (tag->hdr.size != ATAG_BDADDR_SIZE)
+        return -EINVAL;
 
-	snprintf(bdaddr, BDADDR_STR_SIZE, "%02X:%02X:%02X:%02X:%02X:%02X",
-		b[0], b[1], b[2], b[3], b[4], b[5]);
+    snprintf(bdaddr, BDADDR_STR_SIZE, "%02X:%02X:%02X:%02X:%02X:%02X",
+            b[0], b[1], b[2], b[3], b[4], b[5]);
 
-	return 0;
+        return 0;
 }
 
 __tagtable(ATAG_BDADDR, parse_tag_bdaddr);
+
 #elif defined(CONFIG_SERIAL_MSM_HS)
 static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
 	.rx_wakeup_irq = MSM_GPIO_TO_INT(SPEEDY_GPIO_BT_HOST_WAKE),
@@ -2070,7 +2076,7 @@ MODULE_PARM_DESC(bt_fw_version, "BT's fw version");
 static struct platform_device *devices[] __initdata = {
 	&msm_device_uart2,
 #ifdef CONFIG_SERIAL_MSM_HS_PURE_ANDROID
-    &bcm_bt_lpm_device,
+        &bcm_bt_lpm_device,
 #endif
 	&msm_device_smd,
 	&speedy_rfkill,
@@ -2102,9 +2108,12 @@ static struct platform_device *devices[] __initdata = {
 #endif
 	/* camera driver */
 	&msm_camera_sensor_s5k4e1gx,
+
 #if defined(CONFIG_MARIMBA_CORE) && \
    (defined(CONFIG_MSM_BT_POWER) || defined(CONFIG_MSM_BT_POWER_MODULE))
+
 	&msm_bt_power_device,
+
 #endif
 
 #ifdef CONFIG_MSM_ROTATOR
@@ -2120,11 +2129,6 @@ static struct platform_device *devices[] __initdata = {
 
 	&pm8058_leds,
 };
-
-static struct platform_device *proximity_device[] __initdata = {
-	&capella_cm3602,
-};
-
 
 static struct msm_i2c_device_platform_data msm_i2c_pdata = {
 	.i2c_clock = 400000,
@@ -2447,7 +2451,6 @@ static void __init speedy_init(void)
 	msm_add_mem_devices(&pmem_setting);
 
 	platform_add_devices(devices, ARRAY_SIZE(devices));
-
 
 	if (board_emmc_boot()) {
 		rmt_storage_add_ramfs();
