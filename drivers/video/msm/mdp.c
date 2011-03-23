@@ -508,13 +508,13 @@ void mdp_dma(struct mdp_device *mdp_dev, uint32_t addr, uint32_t stride,
 		mdp_dma_user_requested++;
                 if (mdp_dma_user_requested > 2) {
                         pr_err("%s: really busy? start dma timer\n", __func__);
-			/* something wrong in dma, workaround it */
-			mdp_dma_timer_enable = 1;
+		/* something wrong in dma, workaround it */
+                mdp_dma_timer_enable = 1;
 			mdp_dma_user_requested = 0;
                 } else {
-			pr_err("%s: busy\n", __func__);
+		pr_err("%s: busy\n", __func__);
 			goto done;
-		}
+	}
 	} else
 		mdp_dma_user_requested = 0;
 

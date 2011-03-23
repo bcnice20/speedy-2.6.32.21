@@ -162,7 +162,6 @@ void mdp4_overlay_parameters_check(struct mdp4_overlay_pipe *pipe)
 	}
 }
 
-
 void mdp4_overlay_dmap_cfg(struct mdp4_overlay_pipe *pipe, int lcdc)
 {
 	uint32_t	dmap_cfg_reg = 0;
@@ -1290,11 +1289,25 @@ int mdp4_overlay_set(struct mdp_device *mdp_dev, struct fb_info *info, struct md
 	int ret, mixer;
 	struct mdp4_overlay_pipe *pipe;
 	int lcdc;
-
+#ifdef CONFIG_PANEL_SELF_REFRESH
+	unsigned long irq_flags = 0;
+#endif
 
 	if (req->src.format == MDP_FB_FORMAT)
 		req->src.format = MDP_RGB_565;//mfd->fb_imgType;
 
+#ifdef CONFIG_PANEL_SELF_REFRESH
+	if (mdp->mdp_dev.overrides & MSM_MDP_RGB_PANEL_SELE_REFRESH) {
+		panel_icm->force_leave();
+		spin_lock_irqsave(&panel_icm->lock, irq_flags);
+		panel_icm->panel_update = 1;
+		spin_unlock_irqrestore(&panel_icm->lock, irq_flags);
+		wake_up(&panel_update_wait_queue);
+		mutex_lock(&panel_icm->icm_lock);
+		panel_icm->icm_doable = false;
+		mutex_unlock(&panel_icm->icm_lock);
+	}
+#endif
 
 	mixer = info->node; /* minor number of char device */
 
@@ -1325,7 +1338,7 @@ int mdp4_overlay_set(struct mdp_device *mdp_dev, struct fb_info *info, struct md
 		lcdc = mdp_readl(mdp, 0xc0000);
 		if (lcdc) /* LCDC mode */
 			mdp4_overlay_reg_flush(pipe, 1);
-		clk_disable(mdp->clk);
+		clk_enable(mdp->clk);
 	}
 
 
@@ -1355,7 +1368,13 @@ int mdp4_overlay_unset(struct mdp_device *mdp_dev, struct fb_info *info, int ndx
 		mdp4_overlay_reg_flush(pipe, 0);
 
 	mdp4_overlay_pipe_free(pipe);
-
+#ifdef CONFIG_PANEL_SELF_REFRESH
+	if (mdp->mdp_dev.overrides & MSM_MDP_RGB_PANEL_SELE_REFRESH) {
+		mutex_lock(&panel_icm->icm_lock);
+		panel_icm->icm_doable = true;
+		mutex_unlock(&panel_icm->icm_lock);
+	}
+#endif
 
 	clk_disable(mdp->clk);
 	return 0;
@@ -1418,6 +1437,7 @@ int mdp4_overlay_play(struct mdp_device *mdp_dev, struct fb_info *info, struct m
 
 #ifdef CONFIG_PANEL_SELF_REFRESH
 	if (mdp->mdp_dev.overrides & MSM_MDP_RGB_PANEL_SELE_REFRESH) {
+		panel_icm->force_leave();
 		spin_lock_irqsave(&panel_icm->lock, irq_flags);
 		panel_icm->panel_update = 1;
 		spin_unlock_irqrestore(&panel_icm->lock, irq_flags);
