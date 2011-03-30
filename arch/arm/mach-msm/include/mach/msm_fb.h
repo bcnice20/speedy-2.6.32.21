@@ -33,6 +33,7 @@ struct mddi_info;
 #define MSM_MDP4_MDDI_DMA_SWITCH		(1 << 3)
 #define MSM_MDP_DMA_PACK_ALIGN_LSB		(1 << 4)
 #define MSM_MDP_RGB_PANEL_SELE_REFRESH		(1 << 5)
+#define MSM_MDP_FORCE_UPDATE			(1 << 6)
 
 /* mddi type */
 #define MSM_MDP_MDDI_TYPE_I	 0
@@ -191,6 +192,10 @@ struct msm_lcdc_panel_ops {
 	int	(*blank)(struct msm_lcdc_panel_ops *);
 	int	(*unblank)(struct msm_lcdc_panel_ops *);
 	int	(*shutdown)(struct msm_lcdc_panel_ops *);
+#ifdef CONFIG_PANEL_SELF_REFRESH
+	int	(*refresh_enable)(struct msm_lcdc_panel_ops *);
+	int	(*refresh_disable)(struct msm_lcdc_panel_ops *);
+#endif
 };
 
 struct msm_lcdc_platform_data {
