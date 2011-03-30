@@ -413,6 +413,15 @@ config MACH_GLACIER
        help
          Support for the Qualcomm MSM7x30 Glacier board.
 
+config GLACIER_OVERLAY_FORCE_UPDATE
+       depends on MSM_MDP40
+       default y
+       bool "Force overlay to update screen"
+       help
+         Update the screen when the overlay is updated.
+         Do not use this if your framework updates the
+         screen when the overlay is updated.
+
 config MACH_SPADE
        depends on ARCH_MSM7X30
        depends on !MSM_STACKED_MEMORY
@@ -420,6 +429,13 @@ config MACH_SPADE
        bool "MSM7x30 SPADE"
        help
          Support for the Qualcomm MSM7x30 Spade board.
+
+config PANEL_SELF_REFRESH
+       depends on MACH_SPADE
+       default n
+       bool "Panel Self-refresh"
+       help
+         Support for the board Spade Panel Self-refresh.
 
 config MACH_DYNASTY
        depends on ARCH_MSM7X30
@@ -1183,13 +1199,6 @@ config SMD_OFFSET_TCXO_STAT
 	default 0x0
 	help
           TCXO off time is in tick of sleep clock, 1/32768.
-
-config SMD_OFFSET_NEGATE_CLIENT_STAT
-        depends on MSM_SMD
-	hex "SMD offset of negate clinet stat"
-        default 0x0
-        help
-          TCXO shutdown retry conuter and negate tcxoc client counters.
 
 config AXI_SCREEN_POLICY
         depends on ARCH_QSD8X50 || ARCH_MSM7X00A || ARCH_MSM7227 || ARCH_MSM7225
