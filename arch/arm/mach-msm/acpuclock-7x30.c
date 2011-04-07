@@ -80,81 +80,92 @@ struct clkctl_acpu_speed {
 static struct clock_state drv_state = { 0 };
 
 static struct cpufreq_frequency_table freq_table[] = {
-	{ 0, 245760 },
-	{ 1, 368640 },
-	{ 2, 768000 },
-#if defined(CONFIG_MACH_SPADE) || defined(CONFIG_MACH_GLACIER)
-	{ 3, 1017600 },
-	{ 4, 1113600 },
-	{ 5, 1209600 },
-	{ 6, 1305600 },
-	{ 7, 1401600 },
-	{ 8, 1497600 },
-	{ 9, 1516800 },
-#ifndef CONFIG_JESUS_PHONE
-	{ 10, CPUFREQ_TABLE_END },
-#else
-	/* Just an example of some of the insanity I was able to pull off on my
-	   device */
-	{ 10, 1612800 },
-	{ 11, 1708800 },
-	{ 12, 1804800 },
-	{ 13, CPUFREQ_TABLE_END },
-#endif
-#else
-	{ 3, 806400 },
-	{ 4, 1017600 },
-	{ 5, 1113600 },
-	{ 6, 1209600 },
-	{ 7, 1305600 },
-	{ 8, 1401600 },
-	{ 9, 1497600 },
-	{ 10, 1516800 },
-#ifndef CONFIG_JESUS_PHONE
-	{ 11, CPUFREQ_TABLE_END },
-#else
-	/* Just an example of some of the insanity I was able to pull off on my
-	   device */
-	{ 11, 1612800 },
-	{ 12, 1708800 },
-	{ 13, 1804800 },
-	{ 14, CPUFREQ_TABLE_END },
-#endif
-#endif
+	{ 0, 245000 },
+	{ 1, 422400 },
+	{ 2, 460800 },
+	{ 3, 499200 },
+	{ 4, 537600 },
+	{ 5, 576000 },
+	{ 6, 614400 },
+	{ 7, 652800 },
+	{ 8, 691200 },
+	{ 9, 729600 },
+	{ 10, 768000 },
+	{ 11, 806400 },
+	{ 12, 844800 },
+	{ 13, 883200 },
+	{ 14, 921600 },
+	{ 15, 960000 },
+	{ 16, 998400 },
+	{ 17, 1036800 },
+	{ 18, 1075200 },
+	{ 19, 1113600 },
+	{ 20, 1152000 },
+	{ 21, 1190400 },
+	{ 22, 1228800 },
+	{ 23, 1267200 },
+	{ 24, 1305600 },
+	{ 25, 1344000 },
+	{ 26, 1382400 },
+	{ 27, 1420800 },
+	{ 28, 1459200 },
+	{ 29, 1497600 },
+	{ 30, 1536000 },
+	{ 31, 1574400 },
+	{ 32, 1612800 },
+	{ 33, 1689600 },
+	{ 34, 1728000 },
+	{ 35, 1804800 },
+        { 36, CPUFREQ_TABLE_END },
 };
 
 /* Use negative numbers for sources that can't be enabled/disabled */
 #define SRC_LPXO (-2)
 #define SRC_AXI  (-1)
 static struct clkctl_acpu_speed acpu_freq_tbl[] = {
-	{ 24576,  SRC_LPXO, 0, 0,  30720,  900, VDD_RAW(850) },
+	{ 24576,  SRC_LPXO, 0, 0,  30720,  850, VDD_RAW(850) },
 	{ 61440,  PLL_3,    5, 11, 61440,  900, VDD_RAW(900) },
 	{ 122880, PLL_3,    5, 5,  61440,  900, VDD_RAW(900) },
 	{ 184320, PLL_3,    5, 4,  61440,  900, VDD_RAW(900) },
-	{ MAX_AXI_KHZ, SRC_AXI, 1, 0, 61440, 900, VDD_RAW(900) },
-	{ 245760, PLL_3,    5, 2,  61440,  900, VDD_RAW(900) },
-	{ 368640, PLL_3,    5, 1,  122800, 900, VDD_RAW(900) },
-	{ 768000, PLL_1,    2, 0,  153600, 1050, VDD_RAW(1050) },
-	/* Make sure any freq based from PLL_2 is a multiple of 19200! 
-	   Voltage tables are being very conservative and are not designed to
-	   be an undervolt of any sort. */
-#if defined(CONFIG_MACH_SPADE) || defined(CONFIG_MACH_GLACIER)
-	{ 1017600, PLL_2,   3, 0,  192000, 1100, VDD_RAW(1100) },
-#else
-	{ 806400, PLL_2,    3, 0,  192000, 1100, VDD_RAW(1100) },
-	{ 1017600, PLL_2,   3, 0,  192000, 1200, VDD_RAW(1200) },
-#endif
-	{ 1113600, PLL_2,   3, 0,  192000, 1200, VDD_RAW(1200) },
-	{ 1209600, PLL_2,   3, 0,  192000, 1200, VDD_RAW(1200) },
-	{ 1305600, PLL_2,   3, 0,  192000, 1200, VDD_RAW(1200) },
-	{ 1401600, PLL_2,   3, 0,  192000, 1300, VDD_RAW(1300) },
-	{ 1497600, PLL_2,   3, 0,  192000, 1300, VDD_RAW(1300) },
-	{ 1516800, PLL_2,   3, 0,  192000, 1300, VDD_RAW(1300) },
-#ifdef CONFIG_JESUS_PHONE
-	{ 1612800, PLL_2,   3, 0,  192000, 1400, VDD_RAW(1400) },
-	{ 1708800, PLL_2,   3, 0,  192000, 1400, VDD_RAW(1400) },
-	{ 1804800, PLL_2,   3, 0,  192000, 1450, VDD_RAW(1450) },
-#endif
+      { MAX_AXI_KHZ, SRC_AXI, 1, 0, 61440, 900, VDD_RAW(900) },
+	{ 245000, PLL_3,    5, 2,  122500, 900, VDD_RAW(900) },
+	{ 422400, PLL_3,    5, 1,  192000, 925, VDD_RAW(925) },
+	{ 460800, PLL_3,    5, 1,  192000, 950, VDD_RAW(950) },
+	{ 499200, PLL_1,    2, 0,  192000, 950, VDD_RAW(950) },
+	{ 537600, PLL_3,    5, 1,  192000, 975, VDD_RAW(975) },
+	{ 576000, PLL_3,    5, 1,  192000, 975, VDD_RAW(975) },
+	{ 614400, PLL_2,    3, 0,  192000, 975, VDD_RAW(975) },
+	{ 652800, PLL_2,    3, 0,  192000, 1000, VDD_RAW(975) },
+	{ 691200, PLL_2,    3, 0,  192000, 1000, VDD_RAW(1000) },
+	{ 729600, PLL_2,    3, 0,  192000, 1000, VDD_RAW(1000) },
+	{ 768000, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+	{ 806400, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+	{ 844800, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+	{ 883200, PLL_2,    3, 0,  192000, 1025, VDD_RAW(1025) },
+	{ 921600, PLL_2,    3, 0,  192000, 1050, VDD_RAW(1050) },
+	{ 960000, PLL_2,    3, 0,  192000, 1050, VDD_RAW(1050) },
+	{ 998400, PLL_2,    3, 0,  192000, 1050, VDD_RAW(1050) },
+	{ 1036800, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1050) },
+	{ 1075200, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1050) },
+	{ 1113600, PLL_2,   3, 0,  192000, 1075, VDD_RAW(1050) },
+	{ 1152000, PLL_2,   3, 0,  192000, 1100, VDD_RAW(1075) },
+	{ 1190400, PLL_2,   3, 0,  192000, 1100, VDD_RAW(1075) },
+	{ 1228800, PLL_2,   3, 0,  192000, 1100, VDD_RAW(1100) },
+	{ 1228800, PLL_2,   3, 0,  192000, 1100, VDD_RAW(1100) },
+	{ 1267200, PLL_2,   3, 0,  192000, 1125, VDD_RAW(1125) },
+	{ 1305600, PLL_2,   3, 0,  192000, 1175, VDD_RAW(1175) },
+	{ 1344000, PLL_2,   3, 0,  192000, 1175, VDD_RAW(1175) },
+	{ 1382400, PLL_2,   3, 0,  192000, 1200, VDD_RAW(1200) },
+	{ 1420800, PLL_2,   3, 0,  192000, 1225, VDD_RAW(1225) },
+	{ 1459200, PLL_2,   3, 0,  192000, 1225, VDD_RAW(1225) },
+	{ 1497600, PLL_2,   3, 0,  192000, 1250, VDD_RAW(1250) },
+	{ 1536000, PLL_2,   3, 0,  192000, 1275, VDD_RAW(1275) },
+	{ 1574400, PLL_2,   3, 0,  192000, 1275, VDD_RAW(1275) },
+	{ 1593600, PLL_2,   3, 0,  192000, 1300, VDD_RAW(1300) },
+	{ 1612800, PLL_2,   3, 0,  192000, 1325, VDD_RAW(1325) },
+	{ 1689600, PLL_2,   3, 0,  192000, 1375, VDD_RAW(1400) },
+	{ 1728000, PLL_2,   3, 0,  192000, 1375, VDD_RAW(1400) },
+	{ 1804800, PLL_2,   3, 0,  192000, 1425, VDD_RAW(1425) },
 	{ 0 }
 };
 static unsigned long max_axi_rate;
@@ -377,11 +388,7 @@ static unsigned int acpuclk_get_current_vdd(void)
 	unsigned int vdd_mv;
 
 	vdd_raw = msm_spm_get_vdd();
-#ifndef CONFIG_JESUS_PHONE
-	for (vdd_mv = 850; vdd_mv <= 1300; vdd_mv += 25)
-#else
-	for (vdd_mv = 850; vdd_mv <= 1450; vdd_mv += 25)
-#endif
+	for (vdd_mv = 750; vdd_mv <= 1350; vdd_mv += 25)
 		if (VDD_RAW(vdd_mv) == vdd_raw)
 			break;
 
@@ -404,11 +411,7 @@ static int acpuclk_update_freq_tbl(unsigned int acpu_khz, unsigned int acpu_vdd)
 		pr_err("%s: acpuclk invalid speed %d\n", __func__, acpu_khz);
 		return -1;
 	}
-#ifndef CONFIG_JESUS_PHONE
-	if (acpu_vdd > 1300 || acpu_vdd < 850) {
-#else
-	if (acpu_vdd > 1450 || acpu_vdd < 850) {
-#endif
+	if (acpu_vdd > 1350 || acpu_vdd < 750) {
 		pr_err("%s: acpuclk vdd out of ranage, %d\n",
 			__func__, acpu_vdd);
 		return -2;
