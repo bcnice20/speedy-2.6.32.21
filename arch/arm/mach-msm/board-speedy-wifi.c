@@ -86,7 +86,6 @@ static struct wifi_platform_data speedy_wifi_control = {
 	.set_reset      = speedy_wifi_reset,
 	.set_carddetect = speedy_wifi_set_carddetect,
 	.mem_prealloc   = speedy_wifi_mem_prealloc,
-	.dot11n_enable  = 1,
 };
 
 static struct platform_device speedy_wifi_device = {
