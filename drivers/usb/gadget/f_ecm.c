@@ -841,7 +841,6 @@ int ecm_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN])
 	ecm->port.func.get_alt = ecm_get_alt;
 	ecm->port.func.setup = ecm_setup;
 	ecm->port.func.disable = ecm_disable;
-	ecm->port.func.hidden = 1;
 
 	status = usb_add_function(c, &ecm->port.func);
 	if (status) {
